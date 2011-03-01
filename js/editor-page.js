@@ -1,4 +1,4 @@
-Remix.path = '../js';
+Remix.path = '/js';
 
 var remix;
 

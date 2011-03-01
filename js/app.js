@@ -6,7 +6,7 @@ Remix.Loader = function () {};
 
 _.extend(Remix.Loader.prototype, {
     loadFromFile: function (file) {
-        this._file = file;
+        this.file = file;
         var reader = new FileReader();
         reader.onloadend = _.bind(this._fileLoaded, this);
         reader.readAsArrayBuffer(file);
@@ -15,7 +15,8 @@ _.extend(Remix.Loader.prototype, {
     },
 
     _fileLoaded: function (e) {
-        this.onload(e.target.result, this._file.type, this._file.name);
+        e.loader = this;
+        this.onload(e.target.result, this.file.type, this.file.name);
     },
 
     loadFromUrl: function (url) {
@@ -30,6 +31,7 @@ _.extend(Remix.Loader.prototype, {
     },
 
     _urlLoaded: function (e) {
+        e.loader = this;
         this.onload(e.target.response, e.target.getResponseHeader('Content-Type'), this._url.split('/').slice(-1)[0]);
     }
 });
@@ -43,13 +45,46 @@ Remix.Track.prototype = {
         this.type = type;
         this.name = name;
     },
+    
+    analyze: function () {
+        var md5worker = new Worker(Remix.path + '/md5.js');
+        md5worker.onmessage = _.bind(this._onMd5Complete, this);
+        md5worker.postMessage(this.file);
+        this._analyzeRequest = this._remix._nest.analyzeFile(this.file, this._remix._nest.guessType(this.file), {
+             onload: _.bind(this._onAnalyzeLoad, this),
+             onerror: _.bind(this._onAnalyzeError, this)
+        });
+    },
 
-    _onAnalyzeLoad: function (result) {
-        this._analysisTrack = result.response.track;
-        this._remix._nest.loadAnalysis(result.response.track.audio_summary.analysis_url, {
-            onload: _.bind(this._onAnalysisLoad, this),
+    _onMd5Complete: function (e) {
+        this._profileRequest = this._remix._nest.getTrackProfile(e.data, {
+            onload: _.bind(this._onProfileLoad, this),
+            onerror: _.bind(this._onProfileError, this)
+        });
+    },
+
+    _onProfileLoad: function (result) {
+        if (result.response.track.status == 'complete') {
+            this._setProfile(result.response.track);
+            this._analyzeRequest.abort();
+        }
+    },
+
+    _setProfile: function (profile) {
+        this._analysisTrack = profile;
+        this._remix._nest.loadAnalysis(profile.audio_summary.analysis_url, {
+            onload: _.bind(this._onAnalysisLoad, this),        
             onerror: _.bind(this._onAnalysisError, this)
         });
+    },
+    
+    _onProfileError: function (e) {
+        // FIXME
+        console.log('profile error', e);
+    },
+
+    _onAnalyzeLoad: function (result) {
+        this._setProfile(result.response.track);
     },
 
     _onAnalyzeError: function (e) {
@@ -58,6 +93,7 @@ Remix.Track.prototype = {
     },
 
     _onAnalysisLoad: function (analysis) {
+        console.log('analysis loaded');
         this.analysis = analysis;
     },
 
@@ -98,8 +134,8 @@ Remix.Editor = function (elt, content) {
         $(elt).append(codeMirrorElt);
     }, {
         parserfile: ['tokenizejavascript.js', 'parsejavascript.js'],
-        path: '../lib/codemirror/js/',
-        stylesheet: '../lib/codemirror/css/jscolors.css',
+        path: 'lib/codemirror/js/',
+        stylesheet: 'lib/codemirror/css/jscolors.css',
         content: content
     });
     this._editor = editor;
@@ -147,11 +183,12 @@ Remix.Instance.prototype = {
         var track = new Remix.Track();
         track._remix = this;
         this._tracks.push(track);
-        this._nest.analyzeFile(file, this._nest.guessType(file), {
-             onload: _.bind(track._onAnalyzeLoad, track),
-             onerror: _.bind(track._onAnalyzeError, track)
-         });
+        
+        track.file = file;
+        track.analyze();
+        
         var loader = new Remix.Loader();
+        track.loader = loader;
         loader.onload = _.bind(track._onFileLoad, track);
         loader.loadFromFile(file);
     },
