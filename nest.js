@@ -31,6 +31,25 @@ Nest.prototype = {
         return request;
     },
 
+    analyzeUrl: function(url, options) {
+        var form = new FormData();
+        form.append('api_key', this.api_key);
+        form.append('url', url);
+        form.append('bucket', 'audio_summary');
+        var request = new XMLHttpRequest();
+        request.open('POST', 'http://developer.echonest.com/api/v4/track/upload');
+        request.onload = _.bind(function (e) {
+            var result = JSON.parse(request.responseText);
+            result.response.track.audio_summary.analysis_url = this.fixupAnalysisUrl(result.response.track.audio_summary.analysis_url);
+            options.onload(result);
+        }, this);
+        request.onerror = function (e) {
+            options.onerror(e);
+        }
+        request.send(form);
+        return request;
+    },
+
     getTrackProfile: function (md5, options) {
         var request = new XMLHttpRequest();
         // fuck the echo nest api so hard
