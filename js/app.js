@@ -7,6 +7,8 @@ Remix.Loader = function () {};
 _.extend(Remix.Loader.prototype, {
     loadFromFile: function (file) {
         this.file = file;
+        this.type = file.type;
+        this.name = file.name;
         var reader = new FileReader();
         reader.onloadend = _.bind(this._fileLoaded, this);
         reader.readAsArrayBuffer(file);
@@ -16,11 +18,13 @@ _.extend(Remix.Loader.prototype, {
 
     _fileLoaded: function (e) {
         e.loader = this;
-        this.onload(e.target.result, this.file.type, this.file.name);
+        this.data = e.target.result;
+        this.onload(this);
     },
 
     loadFromUrl: function (url) {
-        this._url = url;
+        this.url = url;
+        this.name = url.split('/').slice(-1)[0];
         var request = new XMLHttpRequest();
         request.open('GET', url, true);
         request.responseType = 'arraybuffer';
@@ -32,28 +36,39 @@ _.extend(Remix.Loader.prototype, {
 
     _urlLoaded: function (e) {
         e.loader = this;
-        this.onload(e.target.response, e.target.getResponseHeader('Content-Type'), this._url.split('/').slice(-1)[0]);
+        this.type = e.target.getResponseHeader('Content-Type');
+        this.data = e.target.response;
+        this.onload(this);
     }
 });
 
 Remix.Track = function () {};
 
 Remix.Track.prototype = {
-    _onFileLoad: function (buffer, type, name) {
-        var buffer = this._remix._audioContext.createBuffer(buffer, false);
+    _onFileLoad: function (loader) {
+        var buffer = this._remix._audioContext.createBuffer(loader.data, false);
         this.buffer = buffer;
-        this.type = type;
-        this.name = name;
+        this.type = loader.type;
+        this.name = loader.name;
     },
-    
-    analyze: function () {
+
+    md5: function() {
         var md5worker = new Worker(Remix.path + '/md5.js');
         md5worker.onmessage = _.bind(this._onMd5Complete, this);
         md5worker.postMessage(this.file);
-        this._analyzeRequest = this._remix._nest.analyzeFile(this.file, this._remix._nest.guessType(this.file), {
+    },
+
+    analyze: function () {
+        var options = {
              onload: _.bind(this._onAnalyzeLoad, this),
              onerror: _.bind(this._onAnalyzeError, this)
-        });
+        };
+        if (this.file) {
+            this._analyzeRequest = this._remix._nest.analyzeFile(this.file, this._remix._nest.guessType(this.file), options);
+        }
+        else {
+            this._analyzeRequest = this._remix._nest.analyzeUrl(this.url, options);
+        }
     },
 
     _onMd5Complete: function (e) {
@@ -185,12 +200,27 @@ Remix.Instance.prototype = {
         this._tracks.push(track);
         
         track.file = file;
+        track.md5();
         track.analyze();
         
         var loader = new Remix.Loader();
         track.loader = loader;
         loader.onload = _.bind(track._onFileLoad, track);
         loader.loadFromFile(file);
+    },
+
+    addUrl: function (url) {
+        var track = new Remix.Track();
+        track._remix = this;
+        this._tracks.push(track);
+
+        track.url = url;
+        track.analyze();
+
+        loader = new Remix.Loader();
+        track.loader = loader;
+        loader.onload = _.bind(track._onFileLoad, track);
+        loader.loadFromUrl(url);
     },
 
     getScript: function () {
