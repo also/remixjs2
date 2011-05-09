@@ -4,6 +4,6 @@
 [submodule "lib/jslint"]
 	path = lib/jslint
 	url = https://github.com/douglascrockford/JSLint.git
-[submodule "lib/js-audio"]
-	path = lib/js-audio
-	url = https://github.com/also/js-audio.git
+[submodule "lib/js-audio-segments"]
+	path = lib/js-audio-segments
+	url = https://github.com/also/js-audio-segments.git
