@@ -56,6 +56,7 @@ Remix.Track.prototype = {
         var md5worker = new Worker(Remix.path + '/md5.js');
         md5worker.onmessage = _.bind(this._onMd5Complete, this);
         md5worker.postMessage(this.file);
+        console.log('computing md5');
     },
 
     analyze: function () {
@@ -72,6 +73,7 @@ Remix.Track.prototype = {
     },
 
     _onMd5Complete: function (e) {
+        console.log('md5 complete');
         this._profileRequest = this._remix._nest.getTrackProfile(e.data, {
             onload: _.bind(this._onProfileLoad, this),
             onerror: _.bind(this._onProfileError, this)
@@ -110,6 +112,7 @@ Remix.Track.prototype = {
     _onAnalysisLoad: function (analysis) {
         console.log('analysis loaded');
         this.analysis = analysis;
+        $('#ok').addClass('ok');
     },
 
     _onAnalysisError: function (e) {
@@ -163,18 +166,15 @@ Remix.Editor.prototype = {
 };
 
 Remix.Instance = function (options) {
-    _.bindAll(this, 'run', '_handleBrowse');
+    _.bindAll(this, 'run', '_handleBrowse', 'stop');
     this._editor = new Remix.Editor(options.editorElt, options.editorContent);
     this._audioContext = new AudioContext();
     this._tracks = [];
     this._nest = new Nest(options.echonestApiKey);
 
-    if (options.runElt) {
-        $(options.runElt).bind('click', this.run);
-    }
-    if (options.browseElt) {
-        $(options.browseElt).bind('change', this._handleBrowse);
-    }
+    $(options.runElt).bind('click', this.run);
+    $(options.browseElt).bind('change', this._handleBrowse);
+    $(options.stopElt).bind('click', this.stop);
 };
 
 function toSourceList(context, qqs) {
@@ -195,6 +195,7 @@ function toSourceList(context, qqs) {
 
 Remix.Instance.prototype = {
     addFile: function (file) {
+        console.log('adding file');
         var track = new Remix.Track();
         track._remix = this;
         this._tracks.push(track);
@@ -231,7 +232,7 @@ Remix.Instance.prototype = {
         if (this._player) {
             this._player.stop();
         }
-        var player = new SampleSourcePlayer(this._audioContext, 16384);
+        var player = new SampleSourcePlayer(this._audioContext, 1024);
         player.sampleSource = toSourceList(this._audioContext, qqs);
         player.start();
         this._player = player;
@@ -247,12 +248,20 @@ Remix.Instance.prototype = {
         var track = tracks[tracks.length - 1];
         var analysis = track.analysis;
         var play = _.bind(this._userPlay, this);
-        try {
-            eval(js);
+        with (selection) {
+            with (sorting) {
+                try {
+                    eval(js);
+                }
+                catch (e) {
+                    console.log('exception', e);
+                }
+            }
         }
-        catch (e) {
-            console.log('exception', e);
-        }
+    },
+
+    stop: function () {
+        this._player.stop();
     },
 
     _handleBrowse: function (e) {
@@ -260,7 +269,8 @@ Remix.Instance.prototype = {
         for (var i = 0; i < files.length; i++) {
             this.addFile(files[i]);
         }
-        e.target.value = null;
+        $('#ok').removeClass('ok');
+        //e.target.value = null;
     }
 }
 
