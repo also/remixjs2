@@ -6,6 +6,7 @@ $(function () {
     remix = new Remix.Instance({
         editorElt: $('#editor'),
         runElt: $('#run'),
+        stopElt: $('#stop'),
         browseElt: $('#browse'),
         editorContent: localStorage.editorContent,
         echonestApiKey: localStorage.echonestApiKey
