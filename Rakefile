@@ -10,7 +10,7 @@ file 'dist/site' => ALL do
   sh 'mkdir -p dist/site/js'
   sh 'mkdir -p dist/site/css'
   sh 'cp html/*.html dist/site'
-  sh 'cp js/* nest.js remix.js lib/jslint/fulljslint.js lib/js-audio-segments/audio.js dist/site/js'
+  sh 'cp js/* nest.js remix.js lib/jslint/fulljslint.js lib/js-audio-segments/*.js dist/site/js'
   sh 'cp css/* dist/site/css'
   sh 'mkdir -p dist/site/lib/codemirror'
   sh 'cp -r lib/codemirror/{js,css} dist/site/lib/codemirror'
