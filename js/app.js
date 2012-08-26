@@ -46,10 +46,20 @@ Remix.Track = function () {};
 
 Remix.Track.prototype = {
     _onFileLoad: function (loader) {
-        var buffer = this._remix._audioContext.createBuffer(loader.data, false);
-        this.buffer = buffer;
+        var buffer = this._remix._audioContext.decodeAudioData(loader.data, _.bind(this._onDecodeSuccess, this), this._onDecodeError);
         this.type = loader.type;
         this.name = loader.name;
+    },
+
+    _onDecodeSuccess: function (buffer) {
+        console.log('decoded audio');
+        this.buffer = buffer;
+    },
+
+    _onDecodeError: function () {
+        console.log('decode error');
+        // FIXME
+        console.log(arguments);
     },
 
     md5: function() {
