@@ -1,6 +1,6 @@
 [submodule "lib/codemirror"]
 	path = lib/codemirror
-	url = https://github.com/marijnh/CodeMirror.git
+	url = https://github.com/marijnh/CodeMirror-old.git
 [submodule "lib/jslint"]
 	path = lib/jslint
 	url = https://github.com/douglascrockford/JSLint.git
