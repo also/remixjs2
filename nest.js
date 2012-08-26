@@ -4,7 +4,7 @@ function Nest(api_key) {
 
 Nest.prototype = {
     fixupAnalysisUrl: function(url) {
-        return 'http://developer.echonest.com' + url.substr(46);
+        return url.replace(/^https?:\/\/[^/]+\//, 'http://developer.echonest.com/')
     },
 
     guessType: function(file) {
