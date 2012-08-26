@@ -81,7 +81,7 @@ Remix.Track.prototype = {
     },
 
     _onProfileLoad: function (result) {
-        if (result.response.track.status == 'complete') {
+        if (result.response.track && result.response.track.status == 'complete') {
             this._setProfile(result.response.track);
             this._analyzeRequest.abort();
         }
